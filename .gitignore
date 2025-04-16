@@ -1,0 +1,10 @@
+
+test/*.opts.json
+test/tmp
+package-lock.json
+tmp
+
+# Dependency directories
+node_modules/
+.DS_Store
+Session.vim
