@@ -2,7 +2,7 @@
   "name": "btc-account",
   "version": "0.1.0-beta.1",
   "description": "Bitcoin wallet management with BIP84 support",
-  "main": "src/wdk-wallet-management-btc.js",
+  "main": "index.js",
   "type": "module",
   "scripts": {
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
