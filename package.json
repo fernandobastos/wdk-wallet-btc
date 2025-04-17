@@ -1,10 +1,13 @@
 {
   "name": "btc-account",
-  "version": "1.0.0",
+  "version": "0.1.0-beta.1",
   "description": "Bitcoin wallet management with BIP84 support",
   "main": "src/wdk-wallet-management-btc.js",
+  "type": "module",
   "scripts": {
-    "test": "jest"
+    "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
+    "lint": "standard",
+    "lint:fix": "standard --fix"
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "^1.0.0",
@@ -15,7 +18,8 @@
   },
   "devDependencies": {
     "@types/jest": "^29.0.0",
-    "jest": "^29.0.0"
+    "jest": "^29.0.0",
+    "standard": "17.1.2"
   },
  "standard": {
     "ignore": [

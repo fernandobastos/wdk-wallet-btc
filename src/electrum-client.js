@@ -1,50 +1,72 @@
+// Copyright 2024 Tether Operations Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 'use strict'
 
-const net = require('net')
-const tls = require('tls')
-const bitcoin = require('bitcoinjs-lib')
+import { connect as _netConnect } from 'net'
+import { connect as __tlsConnect } from 'tls'
+import { networks, address as _address, crypto } from 'bitcoinjs-lib'
 
-class ElectrumClient {
+export default class ElectrumClient {
+  #host
+  #port
+  #protocol
+  #network
+  #socket
+  #connected
+  #requestId
+  #pendingRequests
   constructor (config = {}) {
-    this.host = config.host || 'electrum.blockstream.info'
-    this.port = config.port || 50001
-    this.protocol = config.protocol || 'tcp'
+    this.#host = config.host || 'electrum.blockstream.info'
+    this.#port = config.port || 50001
+    this.#protocol = config.protocol || 'tcp'
     if (typeof config.network === 'string') {
-      this.network = config.network === 'regtest' ? bitcoin.networks.regtest : bitcoin.networks.bitcoin
+      this.#network = config.network === 'regtest' ? networks.regtest : networks.bitcoin
     } else {
-      this.network = config.network || bitcoin.networks.bitcoin // Default to mainnet
+      this.#network = config.network || networks.bitcoin // Default to mainnet
     }
-    this.socket = null
-    this.connected = false
-    this.requestId = 0
-    this.pendingRequests = new Map()
+    this.#socket = null
+    this.#connected = false
+    this.#requestId = 0
+    this.#pendingRequests = new Map()
   }
 
   async connect () {
     return new Promise((resolve, reject) => {
       try {
-        const socket = this.protocol === 'tls'
-          ? tls.connect(this.port, this.host)
-          : net.connect(this.port, this.host)
+        const socket = this.#protocol === 'tls'
+          ? __tlsConnect(this.#port, this.#host)
+          : _netConnect(this.#port, this.#host)
 
         socket.on('connect', () => {
-          this.socket = socket
-          this.connected = true
+          this.#socket = socket
+          this.#connected = true
           this.setupSocket()
           resolve(true)
         })
 
         socket.on('error', (error) => {
-          this.connected = false
+          this.#connected = false
           reject(error)
         })
 
         socket.on('close', () => {
-          this.connected = false
+          this.#connected = false
         })
       } catch (error) {
         console.error('Failed to connect:', error)
-        this.connected = false
+        this.#connected = false
         reject(error)
       }
     })
@@ -53,7 +75,7 @@ class ElectrumClient {
   setupSocket () {
     let buffer = ''
 
-    this.socket.on('data', (data) => {
+    this.#socket.on('data', (data) => {
       buffer += data.toString()
 
       while (true) {
@@ -74,9 +96,9 @@ class ElectrumClient {
   }
 
   handleResponse (response) {
-    if (response.id && this.pendingRequests.has(response.id)) {
-      const { resolve, reject } = this.pendingRequests.get(response.id)
-      this.pendingRequests.delete(response.id)
+    if (response.id && this.#pendingRequests.has(response.id)) {
+      const { resolve, reject } = this.#pendingRequests.get(response.id)
+      this.#pendingRequests.delete(response.id)
 
       if (response.error) {
         reject(new Error(response.error.message))
@@ -87,9 +109,9 @@ class ElectrumClient {
   }
 
   async disconnect () {
-    if (this.socket && this.connected) {
-      this.socket.end()
-      this.connected = false
+    if (this.#socket && this.#connected) {
+      this.#socket.end()
+      this.#connected = false
     }
   }
 
@@ -110,8 +132,8 @@ class ElectrumClient {
         params
       }
 
-      this.pendingRequests.set(id, { resolve, reject })
-      this.socket.write(JSON.stringify(request) + '\n')
+      this.#pendingRequests.set(id, { resolve, reject })
+      this.#socket.write(JSON.stringify(request) + '\n')
     })
   }
 
@@ -147,14 +169,12 @@ class ElectrumClient {
   }
 
   getScriptHash (address) {
-    const script = bitcoin.address.toOutputScript(address, this.network)
-    const hash = bitcoin.crypto.sha256(script)
+    const script = _address.toOutputScript(address, this.#network)
+    const hash = crypto.sha256(script)
     return Buffer.from(hash).reverse().toString('hex')
   }
 
   isConnected () {
-    return this.connected
+    return this.#connected
   }
 }
-
-module.exports = ElectrumClient

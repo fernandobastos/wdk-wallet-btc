@@ -1,38 +1,71 @@
-const bitcoin = require('bitcoinjs-lib')
-const BigNumber = require('bignumber.js')
+// Copyright 2024 Tether Operations Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+import { Psbt } from 'bitcoinjs-lib'
+import BigNumber from 'bignumber.js'
 
 const DUST_LIMIT = 546
 
-class WalletAccountBtc {
+export default class WalletAccountBtc {
+  #electrumClient
+  #network
+  #max_fee_limit
+  #getInternalAddress
+  #bip32
+  #txData
+
   constructor (config = {}) {
-    this.electrumClient = config.electrumClient
-    this.network = config.network
-    this._max_fee_limit = 100000 || config.max_fee_limit
-    this._getInternalAddress = config.getInternalAddress
-    this._bip32 = config.bip32
-    this._txData = []
+    this.#electrumClient = config.electrumClient
+    this.#network = config.network
+    this.#max_fee_limit = 100000 || config.max_fee_limit
+    this.#getInternalAddress = config.getInternalAddress
+    this.#bip32 = config.bip32
+    this.#txData = []
     this.path = config.path || ''
     this.index = config.index || 0
     this.address = config.address || ''
     this.keyPair = config.keyPair || {}
   }
 
+  /**
+   * Signs a message.
+   *
+   * @param {string} message - The message to sign.
+   * @returns {Promise<string>} The message's signature.
+   */
   async sign (message) {
     throw new Error('not implemented')
   }
 
+  /**
+   * Verifies a message signature.
+   *
+   * @param {string} message - The message to verify.
+   * @param {string} signature - The signature to verify.
+   * @returns {Promise<boolean>} True if the signature is valid, false otherwise.
+   */
   async verify (message, signature) {
     throw new Error('not implemented')
   }
 
   getLastAttempt () {
-    return this._txData.at(-1)
+    return this.#txData.at(-1)
   }
 
-  async _createTransaction ({ address, amount }) {
+  async #createTransaction ({ address, amount }) {
     const sendAmount = amount
     const recipient = address
-    const changeAddress = await this._getInternalAddress()
+    const changeAddress = await this.#getInternalAddress()
 
     // Estimate fee rate
     let feeRate
@@ -44,11 +77,11 @@ class WalletAccountBtc {
       throw new Error('Failed to estimate fee: ' + err.message)
     }
     // Generate raw transaction
-    const utxoSet = await this._collectUtxos(sendAmount, changeAddress.address)
-    return await this._generateRawTx(utxoSet, sendAmount, recipient, changeAddress, feeRate)
+    const utxoSet = await this.#collectUtxos(sendAmount, changeAddress.address)
+    return await this.#generateRawTx(utxoSet, sendAmount, recipient, changeAddress, feeRate)
   }
 
-  async _collectUtxos (amount, address) {
+  async #collectUtxos (amount, address) {
     let unspent
     try {
       unspent = await this.electrumClient.getUnspent(address)
@@ -66,7 +99,7 @@ class WalletAccountBtc {
 
     for (const utxo of unspent) {
       try {
-        const tx = await this.electrumClient.getTransaction(utxo.tx_hash)
+        const tx = await this.#electrumClient.getTransaction(utxo.tx_hash)
         const vout = tx.vout[utxo.tx_pos]
         collected.push({
           ...utxo,
@@ -86,7 +119,7 @@ class WalletAccountBtc {
     return collected
   }
 
-  async _generateRawTx (utxoSet, sendAmount, recipient, changeAddress, feeRate) {
+  async #generateRawTx (utxoSet, sendAmount, recipient, changeAddress, feeRate) {
     if (+sendAmount <= DUST_LIMIT) {
       throw new Error('send amount must be bigger than dust limit ' + DUST_LIMIT + ' got: ' + sendAmount)
     }
@@ -98,7 +131,7 @@ class WalletAccountBtc {
 
     // Function to create a PSBT
     const createPsbt = (fee) => {
-      const psbt = new bitcoin.Psbt({ network: this.network })
+      const psbt = new Psbt({ network: this.#network })
 
       utxoSet.forEach((utxo, index) => {
         psbt.addInput({
@@ -110,7 +143,7 @@ class WalletAccountBtc {
           },
           bip32Derivation: [
             {
-              masterFingerprint: this._bip32.fingerprint,
+              masterFingerprint: this.#bip32.fingerprint,
               path: changeAddress.derivationPath,
               pubkey: Buffer.from(changeAddress.publicKey, 'hex')
             }
@@ -134,7 +167,7 @@ class WalletAccountBtc {
       }
 
       utxoSet.forEach((utxo, index) => {
-        psbt.signInputHD(index, this._bip32)
+        psbt.signInputHD(index, this.#bip32)
       })
 
       psbt.finalizeAllInputs()
@@ -159,9 +192,9 @@ class WalletAccountBtc {
     }
   }
 
-  async _broadcastTransaction (txHex) {
+  async #broadcastTransaction (txHex) {
     try {
-      return await this.electrumClient.broadcastTransaction(txHex)
+      return await this.#electrumClient.broadcastTransaction(txHex)
     } catch (err) {
       console.error('Electrum broadcast error:', err)
       throw new Error('Failed to broadcast transaction: ' + err.message)
@@ -169,9 +202,9 @@ class WalletAccountBtc {
   }
 
   async sendTransaction ({ sender, recipient, amount }) {
-    const tx = await this._createTransaction({ sender, recipient, amount })
+    const tx = await this.#createTransaction({ sender, recipient, amount })
     try {
-      await this._broadcastTransaction(tx.hex)
+      await this.#broadcastTransaction(tx.hex)
     } catch (err) {
       console.log(err)
       throw new Error('failed to broadcast tx')
@@ -179,5 +212,3 @@ class WalletAccountBtc {
     return tx
   }
 }
-
-module.exports = WalletAccountBtc

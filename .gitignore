@@ -1,7 +1,6 @@
 
 test/*.opts.json
 test/tmp
-package-lock.json
 tmp
 
 # Dependency directories
