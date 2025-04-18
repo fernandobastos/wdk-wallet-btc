@@ -20,7 +20,7 @@
 import { generateMnemonic, validateMnemonic, mnemonicToSeedSync } from 'bip39'
 import { BIP32Factory } from 'bip32'
 import { networks, payments } from 'bitcoinjs-lib'
-import secp from '@bitcoinerlab/secp256k1'
+import ecc from '@bitcoinerlab/secp256k1'
 import ElectrumClient from './electrum-client.js'
 import WalletAccountBtc from './wallet-account-btc.js'
 
