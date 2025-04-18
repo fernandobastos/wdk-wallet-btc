@@ -32,18 +32,23 @@ const bip32 = BIP32Factory(ecc)
 export default class WalletManagerBtc {
   #electrumClient
   #baseDerivationPath
+  #network
+  /**
+   * The wallet’s BIP-39 seed phrase.
+   * @type {string}
+   */
   #seedPhrase
 
   constructor (config = {}) {
     if (typeof config.network === 'string') {
-      this.network =
+      this.#network =
         config.network === 'regtest' ? networks.regtest : networks.bitcoin
     } else {
-      this.network = config.network || networks.bitcoin // Default to mainnet
+      this.#network = config.network || networks.bitcoin // Default to mainnet
     }
-    config.network = this.network
+    config.network = this.#network
     this.#electrumClient = new ElectrumClient(config)
-    this.#baseDerivationPath = "m/84'/0'/0'/0" // Base BIP84 derivation path
+    this.#baseDerivationPath = "m/84'/0'/0'/0"
     this.#seedPhrase = config.seedPhrase
   }
 
@@ -94,7 +99,7 @@ export default class WalletManagerBtc {
 
     const address = payments.p2wpkh({
       pubkey: child.publicKey,
-      network: this.network
+      network: this.#network
     }).address
 
     return new WalletAccountBtc({
@@ -106,7 +111,7 @@ export default class WalletManagerBtc {
         privateKey: child.toWIF()
       },
       electrumClient: this.#electrumClient,
-      network: this.network,
+      network: this.#network,
       bip32: this.#seedToBip32(this.#seedPhrase),
       getInternalAddress: async () => {
         const wallet = await this.getAccount()
@@ -127,10 +132,6 @@ export default class WalletManagerBtc {
       return `m/84'/0'/${account || '0'}'/${change || '0'}`
     }
     return `${this.#baseDerivationPath}/${index}`
-  }
-
-  async init () {
-    await loadWASM()
   }
 
   /**

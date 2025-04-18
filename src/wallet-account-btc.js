@@ -31,9 +31,27 @@ export default class WalletAccountBtc {
     this.#getInternalAddress = config.getInternalAddress
     this.#bip32 = config.bip32
     this.#txData = []
+    /**
+   * The derivation path of this account (see BIP-44).
+   * @type {string}
+   */
     this.path = config.path || ''
+    /**
+   * The derivation path's index of this account.
+   * @type {number}
+   */
     this.index = config.index || 0
+    /**
+   * The account's address.
+   * @type {string}
+   */
     this.address = config.address || ''
+    /**
+   * The account's key pair.
+   * @type {Object} KeyPair
+   * @property {string} publicKey - The public key in hex format
+   * @property {string} privateKey - The private key in WIF format
+   */
     this.keyPair = config.keyPair || {}
   }
 
