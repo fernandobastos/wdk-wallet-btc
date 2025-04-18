@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import { Psbt } from 'bitcoinjs-lib'
+import { crypto, Psbt } from 'bitcoinjs-lib'
 import BigNumber from 'bignumber.js'
 
 const DUST_LIMIT = 546
@@ -32,26 +32,26 @@ export default class WalletAccountBtc {
     this.#bip32 = config.bip32
     this.#txData = []
     /**
-   * The derivation path of this account (see BIP-44).
-   * @type {string}
-   */
+     * The derivation path of this account (see BIP-44).
+     * @type {string}
+     */
     this.path = config.path || ''
     /**
-   * The derivation path's index of this account.
-   * @type {number}
-   */
+     * The derivation path's index of this account.
+     * @type {number}
+     */
     this.index = config.index || 0
     /**
-   * The account's address.
-   * @type {string}
-   */
+     * The account's address.
+     * @type {string}
+     */
     this.address = config.address || ''
     /**
-   * The account's key pair.
-   * @type {Object} KeyPair
-   * @property {string} publicKey - The public key in hex format
-   * @property {string} privateKey - The private key in WIF format
-   */
+     * The account's key pair.
+     * @type {Object} KeyPair
+     * @property {string} publicKey - The public key in hex format
+     * @property {string} privateKey - The private key in WIF format
+     */
     this.keyPair = config.keyPair || {}
   }
 
@@ -62,7 +62,8 @@ export default class WalletAccountBtc {
    * @returns {Promise<string>} The message's signature.
    */
   async sign (message) {
-    throw new Error('not implemented')
+    const messageHash = crypto.sha256(Buffer.from(message))
+    return this.#bip32.sign(messageHash).toString('base64')
   }
 
   /**
@@ -73,7 +74,14 @@ export default class WalletAccountBtc {
    * @returns {Promise<boolean>} True if the signature is valid, false otherwise.
    */
   async verify (message, signature) {
-    throw new Error('not implemented')
+    try {
+      const messageHash = crypto.sha256(Buffer.from(message))
+      const signatureBuffer = Buffer.from(signature, 'base64')
+      const result = this.#bip32.verify(messageHash, signatureBuffer)
+      return result
+    } catch (err) {
+      return false
+    }
   }
 
   async #createTransaction ({ address, amount }) {
@@ -92,7 +100,13 @@ export default class WalletAccountBtc {
     }
     // Generate raw transaction
     const utxoSet = await this.#collectUtxos(sendAmount, changeAddress.address)
-    return await this.#generateRawTx(utxoSet, sendAmount, recipient, changeAddress, feeRate)
+    return await this.#generateRawTx(
+      utxoSet,
+      sendAmount,
+      recipient,
+      changeAddress,
+      feeRate
+    )
   }
 
   async #collectUtxos (amount, address) {
@@ -135,7 +149,12 @@ export default class WalletAccountBtc {
 
   async #generateRawTx (utxoSet, sendAmount, recipient, changeAddress, feeRate) {
     if (+sendAmount <= DUST_LIMIT) {
-      throw new Error('send amount must be bigger than dust limit ' + DUST_LIMIT + ' got: ' + sendAmount)
+      throw new Error(
+        'send amount must be bigger than dust limit ' +
+          DUST_LIMIT +
+          ' got: ' +
+          sendAmount
+      )
     }
 
     let totalInput = new BigNumber(0)
@@ -190,7 +209,9 @@ export default class WalletAccountBtc {
 
     let psbt = createPsbt(0)
     const dummyTx = psbt.extractTransaction()
-    let estimatedFee = new BigNumber(feeRate).multipliedBy(dummyTx.virtualSize()).integerValue(BigNumber.ROUND_CEIL)
+    let estimatedFee = new BigNumber(feeRate)
+      .multipliedBy(dummyTx.virtualSize())
+      .integerValue(BigNumber.ROUND_CEIL)
 
     const minRelayFee = new BigNumber(141) // Minimum relay fee in satoshis
     estimatedFee = BigNumber.max(estimatedFee, minRelayFee)

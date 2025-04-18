@@ -24,7 +24,6 @@ describe("WalletManagerBtc BIP84 Tests", () => {
 
   beforeAll(async () => {
     wallet = new WalletManagerBtc();
-    await wallet.init();
   });
 
   describe("BIP84 Derivation Path Tests", () => {
