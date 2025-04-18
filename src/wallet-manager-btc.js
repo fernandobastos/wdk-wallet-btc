@@ -82,7 +82,7 @@ export default class WalletManagerBtc {
    * Returns the wallet account at a specific index (see [BIP-44](https://en.bitcoin.it/wiki/BIP_0044)).
    *
    * @param {number} index - The index of the account to get.
-   * @returns {Promise<IWalletAccount>} The account.
+   * @returns {Promise<WalletAccountBtc>} The account.
    */
   async getAccount (index = 0) {
     if (!this.#seedPhrase) {
