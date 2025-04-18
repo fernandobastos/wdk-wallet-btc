@@ -24,11 +24,7 @@ import secp from '@bitcoinerlab/secp256k1'
 import ElectrumClient from './electrum-client.js'
 import WalletAccountBtc from './wallet-account-btc.js'
 
-let bip32
-async function loadWASM () {
-  const ecc = await secp
-  bip32 = BIP32Factory(ecc)
-}
+const bip32 = BIP32Factory(ecc)
 
 /**
  * Service class for managing Bitcoin wallets
