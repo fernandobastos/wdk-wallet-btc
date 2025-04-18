@@ -21,9 +21,8 @@ import { generateMnemonic, validateMnemonic, mnemonicToSeedSync } from 'bip39'
 import { BIP32Factory } from 'bip32'
 import { networks, payments } from 'bitcoinjs-lib'
 import secp from '@bitcoinerlab/secp256k1'
-import BigNumber from 'bignumber.js'
-import ElectrumClient from './electrum-client'
-import WalletAccountBtc from './walletAccountBtc'
+import ElectrumClient from './electrum-client.js'
+import WalletAccountBtc from './wallet-account-btc.js'
 
 let bip32
 async function loadWASM () {
@@ -57,25 +56,37 @@ export default class WalletManagerBtc {
   }
 
   set seedPhrase (phrase) {
-    if (!this.isValidSeedPhrase(phrase)) {
+    if (!WalletManagerBtc.isValidSeedPhrase(phrase)) {
       throw new Error('Invalid mnemonic phrase')
     }
     this.#seedPhrase = phrase
   }
 
-  getRandomSeedPhrase () {
+  /**
+   * Returns a random BIP-39 seed phrase.
+   *
+   * @returns {string} The seed phrase.
+   */
+  static getRandomSeedPhrase () {
     const mnemonic = generateMnemonic()
     return mnemonic
   }
 
-  isValidSeedPhrase (seedPhrase) {
+  /**
+   * Checks if a seed phrase is valid.
+   *
+   * @param {string} seedPhrase - The seed phrase.
+   * @returns {boolean} True if the seed phrase is valid.
+   */
+  static isValidSeedPhrase (seedPhrase) {
     return seedPhrase && validateMnemonic(seedPhrase)
   }
 
   /**
-   * Creates a new wallet by index
-   * @param {number} index - The index to derive the path from. Defaults to 0.
-   * @returns {Promise<IWalletAccount>} The restored wallet details.
+   * Returns the wallet account at a specific index (see [BIP-44](https://en.bitcoin.it/wiki/BIP_0044)).
+   *
+   * @param {number} index - The index of the account to get.
+   * @returns {Promise<IWalletAccount>} The account.
    */
   async getAccount (index = 0) {
     if (!this.#seedPhrase) {
@@ -122,83 +133,8 @@ export default class WalletManagerBtc {
     return `${this.#baseDerivationPath}/${index}`
   }
 
-  btcToSats (btc) {
-    const btcAmount = new BigNumber(btc)
-    const satoshiAmount = btcAmount.multipliedBy(100000000)
-    return satoshiAmount.integerValue().toNumber()
-  }
-
-  satsToBtc (satoshi) {
-    const satoshiAmount = new BigNumber(satoshi)
-    const btcAmount = satoshiAmount.dividedBy(100000000)
-    return btcAmount.decimalPlaces(8).toNumber()
-  }
-
   async init () {
     await loadWASM()
-  }
-
-  /**
-   * Creates a new random HD wallet
-   * @returns {Promise<Object>} A new HD wallet instance
-   * @throws {Error} If wallet creation fails
-   */
-  async createWallet () {
-    const mnemonic = generateMnemonic()
-    return this.restoreWalletFromPhrase(mnemonic)
-  }
-
-  /**
-   * Restores a wallet from a mnemonic phrase.
-   * @param {string} mnemonic - The mnemonic phrase to restore from.
-   * @returns {Promise<Object>} The restored wallet details.
-   * @throws {Error} If the mnemonic phrase is invalid.
-   */
-  async restoreWalletFromPhrase (mnemonic) {
-    if (!mnemonic) {
-      throw new Error('Mnemonic phrase cannot be empty')
-    }
-
-    if (!validateMnemonic(mnemonic)) {
-      throw new Error('Invalid mnemonic phrase')
-    }
-
-    const derivationPath = this.#getBIP84HDPathString()
-    const child = this.#deriveChild(mnemonic, derivationPath)
-
-    const address = payments.p2wpkh({
-      pubkey: child.publicKey,
-      network: this.network
-    }).address
-
-    return {
-      mnemonic,
-      address,
-      publicKey: child.publicKey.toString('hex'),
-      privateKey: child.toWIF(),
-      derivationPath
-    }
-  }
-
-  /**
-   * Derives private keys from a mnemonic phrase using a specific derivation path
-   */
-  async derivePrivateKeysFromPhrase (mnemonic) {
-    if (!mnemonic) {
-      throw new Error('Mnemonic phrase cannot be empty')
-    }
-
-    if (!validateMnemonic(mnemonic)) {
-      throw new Error('Invalid mnemonic phrase')
-    }
-
-    const derivationPath = this.#getBIP84HDPathString()
-    const child = this.#deriveChild(mnemonic, derivationPath)
-
-    return {
-      privateKey: child.privateKey.toString('hex'),
-      publicKey: child.publicKey.toString('hex')
-    }
   }
 
   /**

@@ -58,10 +58,6 @@ export default class WalletAccountBtc {
     throw new Error('not implemented')
   }
 
-  getLastAttempt () {
-    return this.#txData.at(-1)
-  }
-
   async #createTransaction ({ address, amount }) {
     const sendAmount = amount
     const recipient = address

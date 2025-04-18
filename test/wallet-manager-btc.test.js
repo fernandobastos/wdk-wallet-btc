@@ -13,7 +13,7 @@
 // limitations under the License.
 "use strict";
 
-import WalletManagerBtc from "../src/walletManagerBtc";
+import WalletManagerBtc from "../src/wallet-manager-btc.js";
 import { payments, networks } from "bitcoinjs-lib";
 import { mnemonicToSeedSync, validateMnemonic } from "bip39";
 import { BIP32Factory } from "bip32";
@@ -89,28 +89,6 @@ describe("WalletManagerBtc BIP84 Tests", () => {
     });
   });
 
-  describe("Wallet Creation Tests", () => {
-    test("should create a valid BIP84 wallet", async () => {
-      const newWallet = await wallet.createWallet();
-
-      expect(validateMnemonic(newWallet.mnemonic)).toBe(true);
-      expect(newWallet.address.startsWith("bc1")).toBe(true);
-      expect(newWallet.publicKey.length).toBe(66);
-      expect(newWallet.privateKey.length).toBeLessThanOrEqual(52);
-    });
-
-    test("should restore wallet correctly from mnemonic", async () => {
-      const newWallet = await wallet.createWallet();
-      const restoredWallet = await wallet.restoreWalletFromPhrase(
-        newWallet.mnemonic
-      );
-
-      expect(restoredWallet.address).toBe(newWallet.address);
-      expect(restoredWallet.publicKey).toBe(newWallet.publicKey);
-      expect(restoredWallet.privateKey).toBe(newWallet.privateKey);
-    });
-  });
-
   describe("Index-based Wallet Creation Tests", () => {
     const testMnemonic =
       "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -127,21 +105,8 @@ describe("WalletManagerBtc BIP84 Tests", () => {
   });
 
   describe("Error Handling Tests", () => {
-    test("should throw error for invalid mnemonic", async () => {
-      const invalidMnemonic = "invalid mnemonic phrase";
-      await expect(
-        wallet.restoreWalletFromPhrase(invalidMnemonic)
-      ).rejects.toThrow("Invalid mnemonic phrase");
-    });
-
-    test("should throw error for empty mnemonic", async () => {
-      await expect(wallet.restoreWalletFromPhrase("")).rejects.toThrow(
-        "Mnemonic phrase cannot be empty"
-      );
-    });
-
     test("should return false for invalid mnemonic", async () => {
-      const result = wallet.isValidSeedPhrase("invalid mnemonic");
+      const result = WalletManagerBtc.isValidSeedPhrase("invalid mnemonic");
       expect(result).toBe(false);
     });
   });

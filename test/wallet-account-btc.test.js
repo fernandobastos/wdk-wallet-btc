@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 import { ok } from "assert";
-import WalletManagerBtc from "../src/walletManagerBtc";
+import WalletManagerBtc from "../src/wallet-manager-btc.js";
 
 describe("BTCAccount Send", () => {
   let walletManager;
