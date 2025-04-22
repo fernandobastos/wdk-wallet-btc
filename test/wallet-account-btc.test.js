@@ -13,106 +13,75 @@
 // limitations under the License.
 import { ok } from "assert";
 import WalletManagerBtc from "../src/wallet-manager-btc.js";
+import { test, hook } from 'brittle'
 
-describe("BTCAccount Send", () => {
-  let walletManager;
-
-  beforeEach(async () => {
-    walletManager = new WalletManagerBtc({
-      port: 8001,
-      host: "localhost",
-      network: "regtest",
-    });
-    walletManager.seedPhrase =
+let walletManager;
+hook('before',async () => {
+  walletManager = new WalletManagerBtc({
+    port: 8001,
+    host: "localhost",
+    network: "regtest",
+  });
+  walletManager.seedPhrase =
     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
-  });
-
-  it("should sign a message", async () => {
-    const account = await walletManager.getAccount();
-    const signature = await account.sign("Hello, world!");
-    expect(signature).toBeDefined();
-  });
-  
-  it("should verify a message signature", async () => {
-    const account = await walletManager.getAccount();
-    const signature = await account.sign("Hello, world!");
-    const isValid = await account.verify("Hello, world!", signature);
-    expect(isValid).toBe(true);
-  });
-  
-  it("should verify a message signature against an invalid signature", async () => {
-    const account = await walletManager.getAccount();
-    const isValid = await account.verify("Hello, world!", "invalid");
-    expect(isValid).toBe(false);
-  });
-
-  // it("should send a transaction successfully", async () => {
-  //   const sender = {
-  //     mnemonic:
-  //       "together wire turn hat cube card bargain utility state awesome party story",
-  //   };
-  //   const recipient = "bcrt1q03lzm6tjtlng04lchtlpfk9hp93f5yrgklavtv";
-  //   walletManager.seedPhrase = sender.mnemonic;
-  //   const account = await walletManager.getAccount();
-  //   console.log(`Account: ${JSON.stringify(account)}`);
-  //   const amount = 0.001;
-
-  //   const result = await account.sendTransaction({ sender, recipient, amount });
-
-  //   ok(result.txid, "Transaction ID should be present");
-
-  //   // Fetch transaction details from Electrum
-  //   const electrumClient = walletManager.electrumClient;
-  //   const tx = await electrumClient.getTransaction(result.txid);
-  //   ok(tx, "Transaction details should be fetched from Electrum");
-
-  //   // Verify transaction outputs
-  //   let totalOutput = 0;
-  //   let recipientOutputFound = false;
-  //   for (const vout of tx.vout) {
-  //     totalOutput += vout.value;
-  //     if (vout.scriptPubKey.address === recipient && vout.value === amount) {
-  //       recipientOutputFound = true;
-  //     }
-  //   }
-  //   ok(
-  //     recipientOutputFound,
-  //     "Recipient output should be present with the correct amount"
-  //   );
-
-  //   // Calculate and verify fee
-  //   const unspent = await electrumClient.getUnspent(addr.address);
-  //   let totalInput = 0;
-  //   for (const utxo of unspent) {
-  //     const tx = await electrumClient.getTransaction(utxo.tx_hash);
-  //     totalInput += tx.vout[utxo.tx_pos].value;
-  //   }
-
-  //   const fee = totalInput - totalOutput;
-  //   ok(fee >= 0, "Fee should be non-negative");
-  //   ok(fee <= 5000, "Fee should not be too high"); // Adjust the maximum fee as needed
-  // }, 30000);
-
-  // it('fuzz', async () => {
-  //   const sender = {
-  //     mnemonic: 'together wire turn hat cube card bargain utility state awesome party story'
-  //   }
-  //   const recipient = 'bcrt1q03lzm6tjtlng04lchtlpfk9hp93f5yrgklavtv'
-  //   const addr = await walletManager.restoreWalletFromPhrase(sender.mnemonic)
-
-  //   await new Promise(resolve => setTimeout(resolve, 2000)) // cant do too many tx at once
-
-  //   const numIterations = 10
-
-  //   for (let i = 0; i < numIterations; i++) {
-  //     // Generate a random amount between 0.00001 and 0.001 BTC
-  //     const amount = Math.random() * 0.00099 + 0.00001
-
-  //     const result = await walletManager.send({ sender, recipient, amount })
-  //     assert.ok(result.txid, `Transaction ID should be present for iteration ${i + 1}`)
-  //     // console.log(`Transaction ${i + 1} successful with amount: ${amount}`);
-  //     await new Promise(resolve => setTimeout(resolve, 2000))
-  //   }
-  // }, 60000)
 });
+
+
+test("should sign a message", async (t) => {
+  const account = await walletManager.getAccount();
+  const signature = await account.sign("Hello, world!");
+  t.ok(signature);
+});
+
+test("should verify a message signature", async (t) => {
+  const account = await walletManager.getAccount();
+  const signature = await account.sign("Hello, world!");
+  const isValid = await account.verify("Hello, world!", signature);
+  t.ok(isValid);
+});
+
+test("should verify a message signature against an invalid signature", async (t) => {
+  const account = await walletManager.getAccount();
+  const isValid = await account.verify("Hello, world!", "invalid");
+  t.is(isValid, false);
+});
+
+test("should send a transaction successfully", async (t) => {
+  const sender = {
+    mnemonic:
+      "together wire turn hat cube card bargain utility state awesome party story",
+  };
+  const recipient = "bcrt1q03lzm6tjtlng04lchtlpfk9hp93f5yrgklavtv";
+  walletManager.seedPhrase = sender.mnemonic;
+  const account = await walletManager.getAccount();
+  console.log(`Account: ${JSON.stringify(account)}`);
+  const amount = 0.001;
+
+  const result = await account.sendTransaction({ sender, recipient, amount });
+
+  t.ok(result);
+}, 30000);
+
+test('fuzz sending', async (t) => {
+  const sender = {
+  mnemonic: 'together wire turn hat cube card bargain utility state awesome party story'
+  }
+  const recipient = 'bcrt1q03lzm6tjtlng04lchtlpfk9hp93f5yrgklavtv'
+  const account = await walletManager.getAccount()
+
+  await new Promise(resolve => setTimeout(resolve, 2000)) // cant do too many tx at once
+
+  const numIterations = 10
+
+  for (let i = 0; i < numIterations; i++) {
+  // Generate a random amount between 0.00001 and 0.001 BTC
+  const amount = Math.random() * 0.00099 + 0.00001
+    t.comment('sending   ', amount)
+
+  const result = await account.sendTransaction({ sender, recipient, amount })
+  t.ok(result, `Transaction ID should be present for iteration ${i + 1}`)
+  // console.log(`Transaction ${i + 1} successful with amount: ${amount}`);
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  }
+}, 60000)

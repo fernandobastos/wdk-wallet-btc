@@ -14,7 +14,6 @@
 'use strict'
 
 import ElectrumClient from '../src/electrum-client'
-import bitcoin from 'bitcoinjs-lib'
 
 describe('ElectrumClient Integration Tests', () => {
   let client

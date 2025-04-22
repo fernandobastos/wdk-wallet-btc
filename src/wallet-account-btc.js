@@ -28,7 +28,6 @@ export default class WalletAccountBtc {
     this.#electrumClient = config.electrumClient
     this.#network = config.network
     this.#max_fee_limit = 100000 || config.max_fee_limit
-    this.#getInternalAddress = config.getInternalAddress
     this.#bip32 = config.bip32
     this.#txData = []
     /**
@@ -84,27 +83,21 @@ export default class WalletAccountBtc {
     }
   }
 
-  async #createTransaction ({ address, amount }) {
-    const sendAmount = amount
-    const recipient = address
-    const changeAddress = await this.#getInternalAddress()
-
-    // Estimate fee rate
+  async #createTransaction ({ recipient, amount }) {
     let feeRate
     try {
-      const feeEstimate = await this.electrumClient.getFeeEstimate(1)
+      const feeEstimate = await this.#electrumClient.getFeeEstimate(1)
       feeRate = new BigNumber(feeEstimate).multipliedBy(100000)
     } catch (err) {
       console.error('Electrum client error:', err)
       throw new Error('Failed to estimate fee: ' + err.message)
     }
-    // Generate raw transaction
-    const utxoSet = await this.#collectUtxos(sendAmount, changeAddress.address)
+
+    const utxoSet = await this.#collectUtxos(amount, this.address)
     return await this.#generateRawTx(
       utxoSet,
-      sendAmount,
+      amount,
       recipient,
-      changeAddress,
       feeRate
     )
   }
@@ -112,7 +105,7 @@ export default class WalletAccountBtc {
   async #collectUtxos (amount, address) {
     let unspent
     try {
-      unspent = await this.electrumClient.getUnspent(address)
+      unspent = await this.#electrumClient.getUnspent(address)
     } catch (err) {
       console.error('Electrum client error:', err)
       throw new Error('Failed to fetch UTXOs: ' + err.message)
@@ -147,7 +140,7 @@ export default class WalletAccountBtc {
     return collected
   }
 
-  async #generateRawTx (utxoSet, sendAmount, recipient, changeAddress, feeRate) {
+  async #generateRawTx (utxoSet, sendAmount, recipient, feeRate) {
     if (+sendAmount <= DUST_LIMIT) {
       throw new Error(
         'send amount must be bigger than dust limit ' +
@@ -177,8 +170,8 @@ export default class WalletAccountBtc {
           bip32Derivation: [
             {
               masterFingerprint: this.#bip32.fingerprint,
-              path: changeAddress.derivationPath,
-              pubkey: Buffer.from(changeAddress.publicKey, 'hex')
+              path: this.path,
+              pubkey: Buffer.from(this.keyPair.publicKey, 'hex')
             }
           ]
         })
@@ -192,7 +185,7 @@ export default class WalletAccountBtc {
       const change = totalInput.minus(sendAmount).minus(fee)
       if (change.isGreaterThan(DUST_LIMIT)) {
         psbt.addOutput({
-          address: changeAddress.address,
+          address: this.address,
           value: change.toNumber()
         })
       } else if (change.isLessThan(0)) {
@@ -236,14 +229,24 @@ export default class WalletAccountBtc {
     }
   }
 
+  /**
+   * Sends a transaction.
+   *
+   * @param {Object} options - The transaction options.
+   * @param {string} options.sender - The sender address.
+   * @param {string} options.recipient - The recipient address.
+   * @param {number} options.amount - The amount to send in bitcoin.
+   * @returns {Promise<Object>} The transaction details.
+   */
   async sendTransaction ({ sender, recipient, amount }) {
-    const tx = await this.#createTransaction({ sender, recipient, amount })
+    const satoshi = new BigNumber(amount).multipliedBy(100000000).integerValue(BigNumber.ROUND_DOWN).toNumber()
+    const tx = await this.#createTransaction({ sender, recipient, amount: satoshi })
     try {
       await this.#broadcastTransaction(tx.hex)
     } catch (err) {
       console.log(err)
       throw new Error('failed to broadcast tx')
     }
-    return tx
+    return tx.txid
   }
 }

@@ -18,63 +18,60 @@ import { payments, networks } from "bitcoinjs-lib";
 import { mnemonicToSeedSync, validateMnemonic } from "bip39";
 import { BIP32Factory } from "bip32";
 import ecc from "@bitcoinerlab/secp256k1";
+import { test } from 'brittle'
 
-describe("WalletManagerBtc BIP84 Tests", () => {
+test("WalletManagerBtc BIP84 Tests", async (t) => {
   let wallet;
 
-  beforeAll(async () => {
+  t.beforeEach(async () => {
     wallet = new WalletManagerBtc();
   });
 
-  describe("BIP84 Derivation Path Tests", () => {
+  test("BIP84 Derivation Path Tests", async (t) => {
     const testMnemonic =
       "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
-    test("should generate correct BIP84 derivation path", async () => {
+    t.test("should generate correct BIP84 derivation path", async (t) => {
       wallet.seedPhrase = testMnemonic;
       const walletAccount = await wallet.getAccount(0);
-      expect(walletAccount.path).toBe("m/84'/0'/0'/0/0");
+      t.is(walletAccount.path, "m/84'/0'/0'/0/0");
     });
 
-    test("should generate correct BIP84 addresses", async () => {
+    t.test("should generate correct BIP84 addresses", async (t) => {
       wallet.seedPhrase = testMnemonic;
       const walletAccount = await wallet.getAccount(0);
-      expect(walletAccount.address).toBe(
-        "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"
-      );
+      t.is(walletAccount.address, "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu");
     });
 
-    test("should generate correct extended public key", async () => {
+    t.test("should generate correct extended public key", async (t) => {
       wallet.seedPhrase = testMnemonic;
       const walletAccount = await wallet.getAccount(0);
-      expect(walletAccount.keyPair.publicKey).toBe(
+      t.is(walletAccount.keyPair.publicKey,
         "0330d54fd0dd420a6e5f8d3624f5f3482cae350f79d5f0753bf5beef9c2d91af3c"
       );
     });
 
-    test("should generate correct private key", async () => {
+    t.test("should generate correct private key", async (t) => {
       wallet.seedPhrase = testMnemonic;
       const walletAccount = await wallet.getAccount(0);
-      expect(walletAccount.keyPair.privateKey).toBe(
+      t.is(walletAccount.keyPair.privateKey,
         "KyZpNDKnfs94vbrwhJneDi77V6jF64PWPF8x5cdJb8ifgg2DUc9d"
       );
     });
   });
 
-  describe("BIP84 Receiving and Change Address Tests", () => {
+  test("BIP84 Receiving and Change Address Tests", async (t) => {
     const testMnemonic =
       "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
-    test("should generate correct second receiving address (m/84'/0'/0'/0/1)", async () => {
+    t.test("should generate correct second receiving address (m/84'/0'/0'/0/1)", async (t) => {
       wallet.seedPhrase = testMnemonic;
       const walletAccount = await wallet.getAccount(1);
-      expect(walletAccount.path).toBe("m/84'/0'/0'/0/1");
-      expect(walletAccount.address).toBe(
-        "bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g"
-      );
+      t.is(walletAccount.path, "m/84'/0'/0'/0/1");
+      t.is(walletAccount.address, "bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g");
     });
 
-    test("should generate correct first change address (m/84'/0'/0'/1/0)", async () => {
+    t.test("should generate correct first change address (m/84'/0'/0'/1/0)", async (t) => {
       const seed = mnemonicToSeedSync(testMnemonic);
       const root = BIP32Factory(ecc).fromSeed(seed);
       const child = root.derivePath("m/84'/0'/0'/1/0");
@@ -84,29 +81,29 @@ describe("WalletManagerBtc BIP84 Tests", () => {
         network: networks.bitcoin,
       }).address;
 
-      expect(address).toBe("bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el");
+      t.is(address, "bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el");
     });
   });
 
-  describe("Index-based Wallet Creation Tests", () => {
+  test("Index-based Wallet Creation Tests", async (t) => {
     const testMnemonic =
       "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
-    test("should generate different addresses for different indices", async () => {
+    t.test("should generate different addresses for different indices", async (t) => {
       wallet.seedPhrase = testMnemonic;
       const wallet0 = await wallet.getAccount(0);
       const wallet1 = await wallet.getAccount(1);
 
-      expect(wallet0.address).not.toBe(wallet1.address);
-      expect(wallet0.keyPair.publicKey).not.toBe(wallet1.publicKey);
-      expect(wallet0.keyPair.privateKey).not.toBe(wallet1.privateKey);
+      t.not(wallet0.address, wallet1.address);
+      t.not(wallet0.keyPair.publicKey, wallet1.keyPair.publicKey);
+      t.not(wallet0.keyPair.privateKey, wallet1.keyPair.privateKey);
     });
   });
 
-  describe("Error Handling Tests", () => {
-    test("should return false for invalid mnemonic", async () => {
+  test("Error Handling Tests", async (t) => {
+    t.test("should return false for invalid mnemonic", async (t) => {
       const result = WalletManagerBtc.isValidSeedPhrase("invalid mnemonic");
-      expect(result).toBe(false);
+      t.is(result, false);
     });
   });
 });

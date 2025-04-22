@@ -33,18 +33,21 @@ export default class WalletManagerBtc {
   #electrumClient
   #baseDerivationPath
   #network
-  /**
-   * The wallet’s BIP-39 seed phrase.
-   * @type {string}
-   */
   #seedPhrase
 
+  /**
+   * Constructor for the WalletManagerBtc class.
+   *
+   * @param {Object} config - The configuration object.
+   * @param {string} config.network - The Bitcoin network to use (e.g., 'bitcoin', 'regtest'). Defaults to bitcoin.
+   * @param {string} config.host - The Electrum server hostname.
+   * @param {number} config.port - The Electrum server port.
+   * @param {string} config.seedPhrase - The BIP-39 seed phrase to use for the wallet.
+   */
   constructor (config = {}) {
     if (typeof config.network === 'string') {
       this.#network =
         config.network === 'regtest' ? networks.regtest : networks.bitcoin
-    } else {
-      this.#network = config.network || networks.bitcoin // Default to mainnet
     }
     config.network = this.#network
     this.#electrumClient = new ElectrumClient(config)
@@ -52,6 +55,10 @@ export default class WalletManagerBtc {
     this.#seedPhrase = config.seedPhrase
   }
 
+  /**
+   * The wallet’s BIP-39 seed phrase.
+   * @type {string}
+   */
   get seedPhrase () {
     return this.#seedPhrase
   }
@@ -112,11 +119,7 @@ export default class WalletManagerBtc {
       },
       electrumClient: this.#electrumClient,
       network: this.#network,
-      bip32: this.#seedToBip32(this.#seedPhrase),
-      getInternalAddress: async () => {
-        const wallet = await this.getAccount()
-        return wallet
-      }
+      bip32: this.#seedToBip32(this.#seedPhrase)
     })
   }
 
