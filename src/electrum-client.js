@@ -52,7 +52,7 @@ export default class ElectrumClient {
         socket.on('connect', () => {
           this.#socket = socket
           this.#connected = true
-          this.setupSocket()
+          this.#setupSocket()
           resolve(true)
         })
 
@@ -72,7 +72,7 @@ export default class ElectrumClient {
     })
   }
 
-  setupSocket () {
+  #setupSocket () {
     let buffer = ''
 
     this.#socket.on('data', (data) => {
@@ -87,7 +87,7 @@ export default class ElectrumClient {
 
         try {
           const response = JSON.parse(line)
-          this.handleResponse(response)
+          this.#handleResponse(response)
         } catch (error) {
           console.error('Failed to parse response:', error)
         }
@@ -95,7 +95,7 @@ export default class ElectrumClient {
     })
   }
 
-  handleResponse (response) {
+  #handleResponse (response) {
     if (response.id && this.#pendingRequests.has(response.id)) {
       const { resolve, reject } = this.#pendingRequests.get(response.id)
       this.#pendingRequests.delete(response.id)
@@ -115,7 +115,7 @@ export default class ElectrumClient {
     }
   }
 
-  async request (method, params = []) {
+  async #request (method, params = []) {
     if (!this.isConnected()) {
       try {
         await this.connect()
@@ -139,7 +139,7 @@ export default class ElectrumClient {
 
   async getBalance (address) {
     const scriptHash = this.getScriptHash(address)
-    const result = await this.request('blockchain.scripthash.get_balance', [scriptHash])
+    const result = await this.#request('blockchain.scripthash.get_balance', [scriptHash])
     return {
       confirmed: result.confirmed,
       unconfirmed: result.unconfirmed
@@ -148,24 +148,24 @@ export default class ElectrumClient {
 
   async getHistory (address) {
     const scriptHash = this.getScriptHash(address)
-    return await this.request('blockchain.scripthash.get_history', [scriptHash])
+    return await this.#request('blockchain.scripthash.get_history', [scriptHash])
   }
 
   async getUnspent (address) {
     const scriptHash = this.getScriptHash(address)
-    return await this.request('blockchain.scripthash.listunspent', [scriptHash])
+    return await this.#request('blockchain.scripthash.listunspent', [scriptHash])
   }
 
   async getTransaction (txid) {
-    return await this.request('blockchain.transaction.get', [txid, true])
+    return await this.#request('blockchain.transaction.get', [txid, true])
   }
 
   async broadcastTransaction (txHex) {
-    return await this.request('blockchain.transaction.broadcast', [txHex])
+    return await this.#request('blockchain.transaction.broadcast', [txHex])
   }
 
   async getFeeEstimate (blocks = 1) {
-    return await this.request('blockchain.estimatefee', [blocks])
+    return await this.#request('blockchain.estimatefee', [blocks])
   }
 
   getScriptHash (address) {
