@@ -1,99 +1,74 @@
 ## API Documentation
 
 ### Constructor
-- **Description**: Initializes a new instance of the BTCAccount class.
+- **Description**: Initializes a new instance of the `WalletManagerBtc` class.
 - **Parameters**:
-  - `config` (Object, optional): Configuration options for the BTCAccount instance.
-    - `network` (string | object, optional): The Bitcoin network to use (e.g., 'regtest', 'bitcoin'). Defaults to `bitcoin.networks.bitcoin` (mainnet).
+  - `config` (Object, optional): Configuration options for the `WalletManagerBtc` instance.
+    - `network` (string, optional): The Bitcoin network to use (e.g., 'regtest', 'bitcoin'). Defaults to `bitcoin`.
     - `host` (string, optional): The Electrum server hostname. Defaults to 'electrum.blockstream.info'.
     - `port` (number, optional): The Electrum server port. Defaults to 50001.
     - `protocol` (string, optional): The Electrum server protocol ('tcp' or 'tls'). Defaults to 'tcp'.
-- **Returns**: A new BTCAccount instance.
+    - `seedPhrase` (string, optional): The BIP-39 seed phrase to use for the wallet.
+- **Returns**: A new `WalletManagerBtc` instance.
 
-### init
-- **Description**: Initializes the WASM module required for BIP32 functionality.
+### getRandomSeedPhrase
+- **Description**: Returns a random BIP-39 seed phrase.
 - **Parameters**: None
-- **Returns**: `Promise<void>`
+- **Returns**: `string`: The seed phrase.
 
-### connect
-- **Description**: Establishes a connection to the Electrum server.
-- **Parameters**: None
-- **Returns**: `Promise<boolean>`: A promise that resolves to `true` if the connection is successful.
-
-### disconnect
-- **Description**: Closes the connection to the Electrum server.
-- **Parameters**: None
-- **Returns**: `Promise<void>`
-
-### createWallet
-- **Description**: Creates a new random HD wallet.
-- **Parameters**: None
-- **Returns**: `Promise<Object>`: A promise that resolves to a new HD wallet instance with the following properties:
-  - `mnemonic` (string): The mnemonic phrase for the wallet.
-  - `address` (string): The Bitcoin address.
-  - `publicKey` (string): The public key.
-  - `privateKey` (string): The private key.
-  - `derivationPath` (string): The derivation path used.
-- **Throws**:
-  - `Error`: If wallet creation fails.
-
-### restoreWalletFromPhrase
-- **Description**: Restores a wallet from a mnemonic phrase.
+### isValidSeedPhrase
+- **Description**: Checks if a seed phrase is valid.
 - **Parameters**:
-  - `mnemonic` (string): The mnemonic phrase to restore from.
-- **Returns**: `Promise<Object>`: A promise that resolves to the restored wallet details with the following properties:
-  - `mnemonic` (string): The mnemonic phrase for the wallet.
-  - `address` (string): The Bitcoin address.
-  - `publicKey` (string): The public key.
-  - `privateKey` (string): The private key.
-  - `derivationPath` (string): The derivation path used.
-- **Throws**:
-  - `Error`: If the mnemonic phrase is invalid.
+  - `seedPhrase` (string): The seed phrase.
+- **Returns**: `boolean`: True if the seed phrase is valid.
 
-### derivePrivateKeysFromPhrase
-- **Description**: Derives private keys from a mnemonic phrase using a specific derivation path.
+### getAccount
+- **Description**: Returns the wallet account at a specific index (see [BIP-44](https://en.bitcoin.it/wiki/BIP_0044)).
 - **Parameters**:
-  - `mnemonic` (string): The mnemonic phrase to restore from.
-- **Returns**: `Promise<Object>`: A promise that resolves to an object containing the derived private and public keys:
-  - `privateKey` (string): The derived private key.
-  - `publicKey` (string): The corresponding public key.
-- **Throws**:
-  - `Error`: If the mnemonic phrase is invalid.
+  - `index` (number, optional): The index of the account to get. Defaults to 0.
+- **Returns**: `Promise<BitcoinAccount>`
 
-### createWalletByIndex
-- **Description**: Creates a new wallet by index.
-- **Parameters**:
-  - `mnemonic` (string): The mnemonic phrase to restore from.
-  - `index` (number, optional): The index to derive the path from. Defaults to 0.
-- **Returns**: `Promise<Object>`: A promise that resolves to the restored wallet details with the following properties:
-  - `mnemonic` (string): The mnemonic phrase for the wallet.
-  - `address` (string): The Bitcoin address.
-  - `publicKey` (string): The public key.
-  - `privateKey` (string): The private key in WIF format.
-  - `derivationPath` (string): The derivation path used.
-- **Returns**: `null` if the mnemonic is invalid.
+  - `publicKey` (string): The public key in hex format.
+    - `privateKey` (string): The private key in WIF format.
 
-### send
-- **Description**: Sends a Bitcoin transaction.
-- **Parameters**:
-  - `sender` (Object): Sender details.
-    - `mnemonic` (string): The sender's mnemonic phrase.
-  - `recipient` (string): The recipient's Bitcoin address.
-  - `amount` (number): The amount to send in BTC.
-- **Returns**: `Promise<Object>`: A promise that resolves to the transaction details.
-  - `txid` (string): The transaction ID.
-  - `hex` (string): The raw transaction hex.
-- **Throws**:
-  - `Error`: If the transaction fails to broadcast.
+### WalletAccountBtc
 
-### btcToSats
-- **Description**: Converts BTC to satoshis.
+#### Constructor
+- **Description**: Initializes a new instance of the `WalletAccountBtc` class.
 - **Parameters**:
-  - `btc` (number): The amount in BTC.
-- **Returns**: `number`: The equivalent amount in satoshis.
+  - `config` (Object): Configuration options for the `WalletAccountBtc` instance.
+    - `electrumClient` (ElectrumClient): The Electrum client instance.
+    - `network` (Object): The Bitcoin network to use (e.g., `networks.regtest`, `networks.bitcoin`).
+    - `max_fee_limit` (number, optional): The maximum fee limit. Defaults to 100000.
+    - `bip32` (Object): The BIP32 instance.
+    - `path` (string, optional): The derivation path of this account (see BIP-44). Defaults to ''.
+    - `index` (number, optional): The derivation path's index of this account. Defaults to 0.
+    - `address` (string, optional): The account's address. Defaults to ''.
+    - `keyPair` (Object, optional): The account's key pair. Defaults to {}.
+      - `publicKey` (string): The public key in hex format.
+      - `privateKey` (string): The private key in WIF format.
+- **Returns**: A new `WalletAccountBtc` instance.
 
-### satsToBtc
-- **Description**: Converts satoshis to BTC.
+#### Methods
+
+##### sign
+- **Description**: Signs a message.
 - **Parameters**:
-  - `satoshi` (number): The amount in satoshis.
-- **Returns**: `number`: The equivalent amount in BTC.
+  - `message` (string): The message to sign.
+- **Returns**: `Promise<string>`: The message's signature.
+
+##### verify
+- **Description**: Verifies a message signature.
+- **Parameters**:
+  - `message` (string): The message to verify.
+  - `signature` (string): The signature to verify.
+- **Returns**: `Promise<boolean>`: True if the signature is valid, false otherwise.
+
+##### sendTransaction
+- **Description**: Sends a transaction.
+- **Parameters**:
+  - `options` (Object): The transaction options.
+    - `sender` (string): The sender address.
+    - `recipient` (string): The recipient address.
+    - `amount` (number): The amount to send in bitcoin.
+- **Returns**: `Promise<Object>`: The transaction details.
