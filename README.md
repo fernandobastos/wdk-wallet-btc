@@ -11,18 +11,18 @@
     - `seedPhrase` (string, optional): The BIP-39 seed phrase to use for the wallet.
 - **Returns**: A new `WalletManagerBtc` instance.
 
-### getRandomSeedPhrase
+#### getRandomSeedPhrase
 - **Description**: Returns a random BIP-39 seed phrase.
 - **Parameters**: None
 - **Returns**: `string`: The seed phrase.
 
-### isValidSeedPhrase
+#### isValidSeedPhrase
 - **Description**: Checks if a seed phrase is valid.
 - **Parameters**:
   - `seedPhrase` (string): The seed phrase.
 - **Returns**: `boolean`: True if the seed phrase is valid.
 
-### getAccount
+#### getAccount
 - **Description**: Returns the wallet account at a specific index (see [BIP-44](https://en.bitcoin.it/wiki/BIP_0044)).
 - **Parameters**:
   - `index` (number, optional): The index of the account to get. Defaults to 0.
