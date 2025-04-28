@@ -1,4 +1,3 @@
-
 test/*.opts.json
 test/tmp
 tmp

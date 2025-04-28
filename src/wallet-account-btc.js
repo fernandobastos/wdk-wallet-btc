@@ -93,6 +93,8 @@ export default class WalletAccountBtc {
       throw new Error('Failed to estimate fee: ' + err.message)
     }
 
+    if(feeRate > 
+
     const utxoSet = await this.#collectUtxos(amount, this.address)
     return await this.#generateRawTx(
       utxoSet,
@@ -233,14 +235,13 @@ export default class WalletAccountBtc {
    * Sends a transaction.
    *
    * @param {Object} options - The transaction options.
-   * @param {string} options.sender - The sender address.
-   * @param {string} options.recipient - The recipient address.
+   * @param {string} options.to - The recipient address.
    * @param {number} options.amount - The amount to send in bitcoin.
    * @returns {Promise<Object>} The transaction details.
    */
-  async sendTransaction ({ sender, recipient, amount }) {
+  async sendTransaction ({ to, amount }) {
     const satoshi = new BigNumber(amount).multipliedBy(100000000).integerValue(BigNumber.ROUND_DOWN).toNumber()
-    const tx = await this.#createTransaction({ sender, recipient, amount: satoshi })
+    const tx = await this.#createTransaction({ recipient: to, amount: satoshi })
     try {
       await this.#broadcastTransaction(tx.hex)
     } catch (err) {

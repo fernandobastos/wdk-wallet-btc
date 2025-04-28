@@ -3,6 +3,7 @@
 ### Constructor
 - **Description**: Initializes a new instance of the `WalletManagerBtc` class.
 - **Parameters**:
+  - `seedPhrase` (string): seed phrase of account
   - `config` (Object, optional): Configuration options for the `WalletManagerBtc` instance.
     - `network` (string, optional): The Bitcoin network to use (e.g., 'regtest', 'bitcoin'). Defaults to `bitcoin`.
     - `host` (string, optional): The Electrum server hostname. Defaults to 'electrum.blockstream.info'.

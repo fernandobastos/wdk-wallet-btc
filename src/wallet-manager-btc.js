@@ -44,7 +44,7 @@ export default class WalletManagerBtc {
    * @param {number} config.port - The Electrum server port.
    * @param {string} config.seedPhrase - The BIP-39 seed phrase to use for the wallet.
    */
-  constructor (config = {}) {
+  constructor (seedPhrase, config = {}) {
     if (typeof config.network === 'string') {
       this.#network =
         config.network === 'regtest' ? networks.regtest : networks.bitcoin
@@ -52,7 +52,7 @@ export default class WalletManagerBtc {
     config.network = this.#network
     this.#electrumClient = new ElectrumClient(config)
     this.#baseDerivationPath = "m/84'/0'/0'/0"
-    this.#seedPhrase = config.seedPhrase
+    this.#seedPhrase = seedPhrase
   }
 
   /**
