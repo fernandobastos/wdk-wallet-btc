@@ -8,8 +8,6 @@
     - `network` (string, optional): The Bitcoin network to use (e.g., 'regtest', 'bitcoin'). Defaults to `bitcoin`.
     - `host` (string, optional): The Electrum server hostname. Defaults to 'electrum.blockstream.info'.
     - `port` (number, optional): The Electrum server port. Defaults to 50001.
-    - `protocol` (string, optional): The Electrum server protocol ('tcp' or 'tls'). Defaults to 'tcp'.
-    - `seedPhrase` (string, optional): The BIP-39 seed phrase to use for the wallet.
 - **Returns**: A new `WalletManagerBtc` instance.
 
 #### getRandomSeedPhrase
