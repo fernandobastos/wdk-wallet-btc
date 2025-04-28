@@ -79,7 +79,7 @@ test('fuzz sending', async (t) => {
   const amount = Math.random() * 0.00099 + 0.00001
     t.comment('sending   ', amount)
 
-  const result = await account.sendTransaction({ sender, recipient, amount })
+  const result = await account.sendTransaction({ sender, to:recipient, value:amount })
   t.ok(result, `Transaction ID should be present for iteration ${i + 1}`)
   // console.log(`Transaction ${i + 1} successful with amount: ${amount}`);
   await new Promise(resolve => setTimeout(resolve, 2000))
