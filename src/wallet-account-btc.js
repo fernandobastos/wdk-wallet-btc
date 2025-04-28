@@ -236,11 +236,11 @@ export default class WalletAccountBtc {
    *
    * @param {Object} options - The transaction options.
    * @param {string} options.to - The recipient address.
-   * @param {number} options.amount - The amount to send in bitcoin.
+   * @param {number} options.value - The amount to send in bitcoin.
    * @returns {Promise<Object>} The transaction details.
    */
-  async sendTransaction ({ to, amount }) {
-    const satoshi = new BigNumber(amount).multipliedBy(100000000).integerValue(BigNumber.ROUND_DOWN).toNumber()
+  async sendTransaction ({ to, value }) {
+    const satoshi = new BigNumber(value).multipliedBy(100000000).integerValue(BigNumber.ROUND_DOWN).toNumber()
     const tx = await this.#createTransaction({ recipient: to, amount: satoshi })
     try {
       await this.#broadcastTransaction(tx.hex)
