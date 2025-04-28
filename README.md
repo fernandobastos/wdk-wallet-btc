@@ -67,7 +67,6 @@
 - **Description**: Sends a transaction.
 - **Parameters**:
   - `options` (Object): The transaction options.
-    - `sender` (string): The sender address.
-    - `recipient` (string): The recipient address.
+    - `to` (string): The recipient address.
     - `amount` (number): The amount to send in bitcoin.
-- **Returns**: `Promise<Object>`: The transaction details.
+- **Returns**: `Promise<String>`: The transaction txid.
