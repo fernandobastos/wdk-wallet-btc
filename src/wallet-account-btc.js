@@ -93,7 +93,6 @@ export default class WalletAccountBtc {
       throw new Error('Failed to estimate fee: ' + err.message)
     }
 
-    if(feeRate > 
 
     const utxoSet = await this.#collectUtxos(amount, this.address)
     return await this.#generateRawTx(
@@ -157,7 +156,6 @@ export default class WalletAccountBtc {
       totalInput = totalInput.plus(utxo.value)
     }
 
-    // Function to create a PSBT
     const createPsbt = (fee) => {
       const psbt = new Psbt({ network: this.#network })
 
@@ -208,10 +206,9 @@ export default class WalletAccountBtc {
       .multipliedBy(dummyTx.virtualSize())
       .integerValue(BigNumber.ROUND_CEIL)
 
-    const minRelayFee = new BigNumber(141) // Minimum relay fee in satoshis
+    const minRelayFee = new BigNumber(141) 
     estimatedFee = BigNumber.max(estimatedFee, minRelayFee)
 
-    // Create the final PSBT with the correct fee
     psbt = createPsbt(estimatedFee)
     const tx = psbt.extractTransaction()
     const txHex = tx.toHex()
