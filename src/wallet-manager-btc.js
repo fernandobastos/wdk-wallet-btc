@@ -11,73 +11,50 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/**
- * @fileoverview Wallet service for Bitcoin using HDNode
- */
-
 'use strict'
 
-import { generateMnemonic, validateMnemonic, mnemonicToSeedSync } from 'bip39'
-import { BIP32Factory } from 'bip32'
-import { networks, payments } from 'bitcoinjs-lib'
 import ecc from '@bitcoinerlab/secp256k1'
+import { BIP32Factory } from 'bip32'
+import { generateMnemonic, validateMnemonic, mnemonicToSeedSync } from 'bip39'
+import { payments } from 'bitcoinjs-lib'
+
 import ElectrumClient from './electrum-client.js'
 import WalletAccountBtc from './wallet-account-btc.js'
 
+const BIP_84_BTC_DERIVATION_PATH = 'm/84\'/0\'/0\'/0'
+
 const bip32 = BIP32Factory(ecc)
 
-/**
- * Service class for managing Bitcoin wallets
- */
 export default class WalletManagerBtc {
-  #electrumClient
-  #baseDerivationPath
-  #network
   #seedPhrase
+  #electrumClient
 
   /**
-   * Constructor for the WalletManagerBtc class.
+   * Creates a new wallet manager for the bitcoin blockchain.
    *
-   * @param {Object} config - The configuration object.
-   * @param {string} config.network - The Bitcoin network to use (e.g., 'bitcoin', 'regtest'). Defaults to bitcoin.
-   * @param {string} config.host - The Electrum server hostname.
-   * @param {number} config.port - The Electrum server port.
-   * @param {string} config.seedPhrase - The BIP-39 seed phrase to use for the wallet.
+   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {Object} [config] - The configuration object.
+   * @param {string} [config.host] - The electrum server's hostname (default: "electrum.blockstream.info").
+   * @param {number} [config.port] - The electrum server's port (default: 50001).
+   * @param {string} [config.network] - The name of the network to use; available values: "bitcoin", "regtest", "testnet" (default: "bitcoin").
    */
   constructor (seedPhrase, config = {}) {
-    if (typeof config.network === 'string') {
-      this.#network =
-        config.network === 'regtest' ? networks.regtest : networks.bitcoin
+    if (!WalletManagerBtc.isValidSeedPhrase(seedPhrase)) {
+      throw new Error('Seed phrase is invalid.')
     }
-    config.network = this.#network
-    this.#electrumClient = new ElectrumClient(config)
-    this.#baseDerivationPath = "m/84'/0'/0'/0"
+
     this.#seedPhrase = seedPhrase
+
+    this.#electrumClient = new ElectrumClient(config)
   }
 
   /**
-   * The wallet’s BIP-39 seed phrase.
-   * @type {string}
-   */
-  get seedPhrase () {
-    return this.#seedPhrase
-  }
-
-  set seedPhrase (phrase) {
-    if (!WalletManagerBtc.isValidSeedPhrase(phrase)) {
-      throw new Error('Invalid mnemonic phrase')
-    }
-    this.#seedPhrase = phrase
-  }
-
-  /**
-   * Returns a random BIP-39 seed phrase.
+   * Returns a random [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    *
    * @returns {string} The seed phrase.
    */
   static getRandomSeedPhrase () {
-    const mnemonic = generateMnemonic()
-    return mnemonic
+    return generateMnemonic()
   }
 
   /**
@@ -87,62 +64,61 @@ export default class WalletManagerBtc {
    * @returns {boolean} True if the seed phrase is valid.
    */
   static isValidSeedPhrase (seedPhrase) {
-    return seedPhrase && validateMnemonic(seedPhrase)
+    return validateMnemonic(seedPhrase)
   }
 
   /**
-   * Returns the wallet account at a specific index (see [BIP-44](https://en.bitcoin.it/wiki/BIP_0044)).
+   * The seed phrase of the wallet.
    *
-   * @param {number} index - The index of the account to get.
-   * @returns {Promise<WalletAccountBtc>} The account.
+   * @type {string}
    */
-  async getAccount (index = 0) {
-    if (!this.#seedPhrase) {
-      return null
-    }
+  get seedPhrase () {
+    return this.#seedPhrase
+  }
 
-    const derivationPath = this.#getBIP84HDPathString(index)
-    const child = this.#deriveChild(this.#seedPhrase, derivationPath)
+  /**
+   * Returns the wallet account at a specific index (see [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)).
+   *
+   * @example
+   * // Returns the account with derivation path m/84'/0'/0'/0/1
+   * const account = wallet.getAccount(1);
+   * @param {number} [index] - The index of the account to get (default: 0).
+   * @returns {WalletAccountBtc} The account.
+  */
+  getAccount (index = 0) {
+    const path = this.#getBIP84HDPathString(index)
+
+    const child = this.#deriveChild(this.#seedPhrase, path)
 
     const address = payments.p2wpkh({
       pubkey: child.publicKey,
-      network: this.#network
-    }).address
+      network: this.#electrumClient.network
+    })
+      .address
+
+    const keyPair = {
+      publicKey: child.publicKey.toString('hex'),
+      privateKey: child.toWIF()
+    }
 
     return new WalletAccountBtc({
-      path: derivationPath,
+      path,
       index,
       address,
-      keyPair: {
-        publicKey: child.publicKey.toString('hex'),
-        privateKey: child.toWIF()
-      },
+      keyPair,
       electrumClient: this.#electrumClient,
-      network: this.#network,
       bip32: this.#seedToBip32(this.#seedPhrase)
     })
   }
 
-  /**
-   * Generates the BIP84 HD path string for a given index.
-   * @param {number} index - The index to derive the path from. Defaults to 0.
-   * @returns {string} The BIP84 HD path string.
-   * @private
-   */
   #getBIP84HDPathString (index = 0) {
     if (typeof index === 'string') {
       const [account, change] = index.split('/').map(Number)
       return `m/84'/0'/${account || '0'}'/${change || '0'}`
     }
-    return `${this.#baseDerivationPath}/${index}`
+    return `${BIP_84_BTC_DERIVATION_PATH}/${index}`
   }
 
-  /**
-   * @param {string} mnemonic - The mnemonic phrase to restore from.
-   * @param {string} path - The BIP32 derivation path.
-   * @returns {Object} - The derived node.
-   * @private
-   */
   #deriveChild (mnemonic, path) {
     const root = this.#seedToBip32(mnemonic)
     const child = root.derivePath(path)

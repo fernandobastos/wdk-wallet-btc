@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 'use strict'
 
 import { connect as _netConnect } from 'net'
@@ -19,41 +18,47 @@ import { connect as __tlsConnect } from 'tls'
 import { networks, address as _address, crypto } from 'bitcoinjs-lib'
 
 export default class ElectrumClient {
+  #network
   #host
   #port
   #protocol
-  #network
+
   #socket
   #connected
-  #requestId
   #pendingRequests
+
   constructor (config = {}) {
+    this.#network = networks[config.network || 'bitcoin']
+
+    if (!this.#network) {
+      throw new Error(`Invalid network: ${config.network}.`)
+    }
+
     this.#host = config.host || 'electrum.blockstream.info'
     this.#port = config.port || 50001
     this.#protocol = config.protocol || 'tcp'
-    if (typeof config.network === 'string') {
-      this.#network = config.network === 'regtest' ? networks.regtest : networks.bitcoin
-    } else {
-      this.#network = config.network || networks.bitcoin // Default to mainnet
-    }
+
     this.#socket = null
     this.#connected = false
-    this.#requestId = 0
     this.#pendingRequests = new Map()
   }
 
-  async connect () {
+  get network () {
+    return this.#network
+  }
+
+  connect () {
     return new Promise((resolve, reject) => {
       try {
-        const socket = this.#protocol === 'tls'
-          ? __tlsConnect(this.#port, this.#host)
-          : _netConnect(this.#port, this.#host)
+        const socket = this.#protocol === 'tcp'
+          ? _netConnect(this.#port, this.#host)
+          : __tlsConnect(this.#port, this.#host)
 
         socket.on('connect', () => {
           this.#socket = socket
           this.#connected = true
           this.#setupSocket()
-          resolve(true)
+          resolve()
         })
 
         socket.on('error', (error) => {

@@ -11,47 +11,73 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+'use strict'
+
 import { crypto, Psbt } from 'bitcoinjs-lib'
 import BigNumber from 'bignumber.js'
 
 const DUST_LIMIT = 546
 
 export default class WalletAccountBtc {
-  #electrumClient
-  #network
-  #max_fee_limit
-  #getInternalAddress
-  #bip32
-  #txData
+  #path
+  #index
+  #address
+  #keyPair
 
-  constructor (config = {}) {
+  #electrumClient
+  #bip32
+
+  constructor (config) {
+    this.#path = config.path
+    this.#index = config.index
+    this.#address = config.address
+    this.#keyPair = config.keyPair
+
     this.#electrumClient = config.electrumClient
-    this.#network = config.network
-    this.#max_fee_limit = 100000 || config.max_fee_limit
+
     this.#bip32 = config.bip32
-    this.#txData = []
-    /**
-     * The derivation path of this account (see BIP-44).
-     * @type {string}
-     */
-    this.path = config.path || ''
-    /**
-     * The derivation path's index of this account.
-     * @type {number}
-     */
-    this.index = config.index || 0
-    /**
-     * The account's address.
-     * @type {string}
-     */
-    this.address = config.address || ''
-    /**
-     * The account's key pair.
-     * @type {Object} KeyPair
-     * @property {string} publicKey - The public key in hex format
-     * @property {string} privateKey - The private key in WIF format
-     */
-    this.keyPair = config.keyPair || {}
+  }
+
+  /**
+   * The derivation path of this account (see [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)).
+   *
+   * @type {number}
+   */
+  get path () {
+    return this.#path
+  }
+
+  /**
+   * The derivation path's index of this account.
+   *
+   * @type {number}
+   */
+  get index () {
+    return this.#index
+  }
+
+  /**
+   * The account's address.
+   *
+   * @type {string}
+   */
+  get address () {
+    return this.#address
+  }
+
+  /**
+   * @typedef {Object} KeyPair
+   * @property {string} publicKey - The public key.
+   * @property {string} privateKey - The private key.
+   */
+
+  /**
+   * The account's key pair.
+   *
+   * @type {KeyPair}
+   */
+  get keyPair () {
+    return this.#keyPair
   }
 
   /**
@@ -62,23 +88,25 @@ export default class WalletAccountBtc {
    */
   async sign (message) {
     const messageHash = crypto.sha256(Buffer.from(message))
+
     return this.#bip32.sign(messageHash).toString('base64')
   }
 
   /**
-   * Verifies a message signature.
+   * Verifies a message's signature.
    *
-   * @param {string} message - The message to verify.
+   * @param {string} message - The original message.
    * @param {string} signature - The signature to verify.
-   * @returns {Promise<boolean>} True if the signature is valid, false otherwise.
+   * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verify (message, signature) {
     try {
       const messageHash = crypto.sha256(Buffer.from(message))
       const signatureBuffer = Buffer.from(signature, 'base64')
       const result = this.#bip32.verify(messageHash, signatureBuffer)
+
       return result
-    } catch (err) {
+    } catch (_) {
       return false
     }
   }
@@ -92,7 +120,6 @@ export default class WalletAccountBtc {
       console.error('Electrum client error:', err)
       throw new Error('Failed to estimate fee: ' + err.message)
     }
-
 
     const utxoSet = await this.#collectUtxos(amount, this.address)
     return await this.#generateRawTx(
@@ -157,7 +184,7 @@ export default class WalletAccountBtc {
     }
 
     const createPsbt = (fee) => {
-      const psbt = new Psbt({ network: this.#network })
+      const psbt = new Psbt({ network: this.#electrumClient.network })
 
       utxoSet.forEach((utxo, index) => {
         psbt.addInput({
@@ -206,7 +233,7 @@ export default class WalletAccountBtc {
       .multipliedBy(dummyTx.virtualSize())
       .integerValue(BigNumber.ROUND_CEIL)
 
-    const minRelayFee = new BigNumber(141) 
+    const minRelayFee = new BigNumber(141)
     estimatedFee = BigNumber.max(estimatedFee, minRelayFee)
 
     psbt = createPsbt(estimatedFee)
@@ -229,16 +256,19 @@ export default class WalletAccountBtc {
   }
 
   /**
-   * Sends a transaction.
+   * @typedef {Object} Transaction
+   * @property {string} to - The transaction's recipient.
+   * @property {number} value - The amount of native tokens to send to the recipient.
+   */
+
+  /**
+   * Sends a transaction with arbitrary data.
    *
-   * @param {Object} options - The transaction options.
-   * @param {string} options.to - The recipient address.
-   * @param {number} options.value - The amount to send in bitcoin.
-   * @returns {Promise<Object>} The transaction details.
+   * @param {Transaction} tx - The transaction to send.
+   * @returns {Promise<string>} The transaction's hash.
    */
   async sendTransaction ({ to, value }) {
-    const satoshi = new BigNumber(value).multipliedBy(100000000).integerValue(BigNumber.ROUND_DOWN).toNumber()
-    const tx = await this.#createTransaction({ recipient: to, amount: satoshi })
+    const tx = await this.#createTransaction({ recipient: to, amount: value })
     try {
       await this.#broadcastTransaction(tx.hex)
     } catch (err) {

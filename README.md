@@ -10,12 +10,12 @@
     - `port` (number, optional): The Electrum server port. Defaults to 50001.
 - **Returns**: A new `WalletManagerBtc` instance.
 
-#### getRandomSeedPhrase
+#### static getRandomSeedPhrase
 - **Description**: Returns a random BIP-39 seed phrase.
 - **Parameters**: None
 - **Returns**: `string`: The seed phrase.
 
-#### isValidSeedPhrase
+#### static isValidSeedPhrase
 - **Description**: Checks if a seed phrase is valid.
 - **Parameters**:
   - `seedPhrase` (string): The seed phrase.
